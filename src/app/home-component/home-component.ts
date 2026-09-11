@@ -1,9 +1,14 @@
 import { Component } from '@angular/core';
+import { inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
+
 
 @Component({
-  imports: [],
+  imports: [RouterLink],
   selector: 'app-home-component',
   styleUrl: './home-component.css',
   templateUrl: './home-component.html',
 })
-export class HomeComponent {}
+export class HomeComponent {
+  // auth = inject(Auth);
+}
