@@ -273,7 +273,19 @@ export class GameService {
 
     return this.drawCardInGame(game);
   }
+  endTurn(): void {
 
+  const game = this.getCurrentGame();
+
+  if (
+    game === null ||
+    game.status !== 'playing'
+  ) {
+    return;
+  }
+
+  this.nextPlayer(game);
+}
   private drawCardInGame(game: Game): Card | null {
     const currentPlayer =
       this.getCurrentPlayerInGame(game);
