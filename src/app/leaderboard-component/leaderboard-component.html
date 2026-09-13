@@ -9,23 +9,22 @@
         </span>
     </div>
 
-
-        <table>
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Spieler</th>
-                    <th>Siege</th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (row of rows; track row.id) {
-                <tr>
-                    <td id="rank">{{ row.rank }}</td>
-                    <td><b>{{ row.username }}</b></td>
-                    <td id="wins">{{ row.wins }}</td>
-                </tr>
-                }
-            </tbody>
-        </table>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Spieler</th>
+                <th>Siege</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (row of rows; track row.id) {
+            <tr>
+                <td id="rank">{{ row.rank }}</td>
+                <td><b>{{ row.username }}</b></td>
+                <td id="wins">{{ row.wins }}</td>
+            </tr>
+            }
+        </tbody>
+    </table>
 </section>
