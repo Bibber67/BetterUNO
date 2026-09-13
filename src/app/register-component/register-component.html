@@ -1,1 +1,70 @@
-<p>register-component works!</p>
+<h1>Account erstellen</h1>
+
+<form #registerForm="ngForm" (ngSubmit)="submit()">
+
+    <label for="username">Benutzername:</label>
+
+    <input
+        id="username"
+        name="username"
+        type="text"
+        [(ngModel)]="username"
+        autocomplete="username"
+        required
+        #usernameInput="ngModel"
+    />
+
+    @if (usernameInput.invalid && usernameInput.touched) {
+        <p>Benutzername muss ausgefüllt sein.</p>
+    }
+
+
+    <label for="password">Passwort:</label>
+
+    <input
+        id="password"
+        name="password"
+        type="password"
+        [(ngModel)]="password"
+        autocomplete="new-password"
+        required
+        #passwordInput="ngModel"
+    />
+
+    @if (passwordInput.invalid && passwordInput.touched) {
+        <p>Passwort muss ausgefüllt sein.</p>
+    }
+
+
+    <label for="confirm">Passwort wiederholen:</label>
+
+    <input
+        id="confirm"
+        name="confirm"
+        type="password"
+        [(ngModel)]="confirm"
+        autocomplete="new-password"
+        required
+        #confirmInput="ngModel"
+    />
+
+    @if (confirmInput.invalid && confirmInput.touched) {
+        <p>Passwort muss wiederholt werden.</p>
+    }
+
+
+    @if (error) {
+        <p>{{ error }}</p>
+    }
+
+
+    <button type="submit" [disabled]="registerForm.invalid">
+        Account erstellen
+    </button>
+
+</form>
+
+<p>
+    Schon registriert?
+    <a routerLink="/login">Zum Login</a>
+</p>

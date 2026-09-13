@@ -1,1 +1,51 @@
-<p>login-component works!</p>
+<h1>Anmeldung</h1>
+
+<form #loginForm="ngForm" (ngSubmit)="submit()">
+
+    <label for="username">Benutzername:</label>
+
+    <input
+        id="username"
+        name="username"
+        type="text"
+        [(ngModel)]="username"
+        required
+        #usernameInput="ngModel"
+    />
+
+    @if (usernameInput.invalid && usernameInput.touched) {
+        <p>Benutzername muss ausgefüllt sein.</p>
+    }
+
+    <label for="password">Passwort:</label>
+
+    <input
+        id="password"
+        name="password"
+        type="password"
+        [(ngModel)]="password"
+        required
+        #passwordInput="ngModel"
+    />
+
+    @if (passwordInput.invalid && passwordInput.touched) {
+        <p>Passwort muss ausgefüllt sein.</p>
+    }
+
+    <button
+        type="submit"
+        [disabled]="loginForm.invalid"
+    >
+        Anmelden
+    </button>
+
+</form>
+
+@if (error) {
+    <p>{{ error }}</p>
+}
+
+<p>
+    Noch keinen Account?
+    <a routerLink="/register">Registrieren</a>
+</p>

@@ -3,6 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { RouterLink } from '@angular/router';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { Auth } from './auth';
 
 @Component({
   imports: [RouterOutlet, RouterLink],
@@ -14,11 +15,12 @@ export class App {
   protected readonly title = signal('UNO');
   
   router = inject(Router);
-  // auth = inject(Auth);
+  auth = inject(Auth);
 
-  // logout(): void {
-  //   this.auth.logout().subscribe(() => {
-  //     this.router.navigateByUrl("/login");
-  //   })
-  // }
+  async logout(): Promise<void> {
+    await this.auth.logout();
+    this.auth.user = null;
+    this.router.navigateByUrl('/login');
+  }
+
 }
