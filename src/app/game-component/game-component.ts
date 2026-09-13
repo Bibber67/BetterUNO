@@ -78,7 +78,7 @@ export class GameComponent implements OnInit, OnDestroy {
     const players: Player[] = [
       {
         id: '1',
-        username: 'Elias',
+        username: 'You',
         hand: [],
         isBot: false
       },
