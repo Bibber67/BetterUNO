@@ -1,33 +1,106 @@
 <section>
-    <span class="header">NEUE RUNDE</span>
-    <h1>Spielarten</h1>
 
-    <div class="grid">
-        <label class="gridElement" [class.selected]="mode === 'bot'">
-            <input type="radio" name="mode" value="bot" [(ngModel)]="mode" />
-            <b>Gegen Bots</b>
-            <p class="small">1-3 Bots</p>
-        </label>
+  <span class="header">
+    NEUE RUNDE
+  </span>
 
-        <label class="gridElement" [class.selected]="mode === 'local'">
-            <input type="radio" name="mode" value="local" [(ngModel)]="mode" />
-            <b>Gegen einen Freund</b>
-            <p class="small">Zwei Menschen am selben Rechner</p>
-        </label>
-    </div>
+  <h1>
+    Spielarten
+  </h1>
 
-    @if (mode === 'bot') {
-        <label for="botCount">Anzahl Bots</label>
+  <div class="grid">
 
-        <select id="botCount" [(ngModel)]="botCount">
-            <option [ngValue]="1">1 Bot</option>
-            <option [ngValue]="2">2 Bots</option>
-            <option [ngValue]="3">3 Bots</option>
-        </select>
-    }
+    <label
+      class="gridElement"
+      [class.selected]="mode === 'bot'"
+    >
 
-    <div class="buttons">
-        <button class="secondary" (click)="back()">Zurück</button>
-        <button class="primary" (click)="start()">Spiel starten</button>
-    </div>
+      <input
+        type="radio"
+        name="mode"
+        value="bot"
+        [(ngModel)]="mode"
+      />
+
+      <b>
+        Gegen Bots
+      </b>
+
+      <p class="small">
+        1–3 Bots
+      </p>
+
+    </label>
+
+    <label
+      class="gridElement"
+      [class.selected]="mode === 'local'"
+    >
+
+      <input
+        type="radio"
+        name="mode"
+        value="local"
+        [(ngModel)]="mode"
+      />
+
+      <b>
+        Spieler gegen Spieler
+      </b>
+
+      <p class="small">
+        Zwei Menschen am selben Rechner
+      </p>
+
+    </label>
+
+  </div>
+
+  @if (mode === 'bot') {
+
+    <label for="botCount">
+      Anzahl Bots
+    </label>
+
+    <select
+      id="botCount"
+      [(ngModel)]="botCount"
+    >
+
+      <option [ngValue]="1">
+        1 Bot
+      </option>
+
+      <option [ngValue]="2">
+        2 Bots
+      </option>
+
+      <option [ngValue]="3">
+        3 Bots
+      </option>
+
+    </select>
+
+  }
+
+  <div class="buttons">
+
+    <button
+      class="secondary"
+      type="button"
+      (click)="back()"
+    >
+      Zurück
+    </button>
+
+    <button
+      class="primary"
+      type="button"
+      (click)="start()"
+    >
+      Spiel starten
+    </button>
+
+  </div>
+
 </section>

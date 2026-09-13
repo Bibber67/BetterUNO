@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Auth } from '../auth';
+import { StorageService } from '../services/storage.service';
 
 @Component({
   imports: [RouterLink],
@@ -9,7 +10,11 @@ import { Auth } from '../auth';
   templateUrl: './home-component.html',
 })
 export class HomeComponent {
+
   readonly auth = inject(Auth);
+
+  private readonly storage =
+    inject(StorageService);
 
   get userName(): string {
     return this.auth.user?.username ?? 'Spieler';
@@ -17,5 +22,16 @@ export class HomeComponent {
 
   get wins(): number {
     return this.auth.user?.wins ?? 0;
+  }
+
+  get hasSavedGame(): boolean {
+
+    const user = this.auth.user;
+
+    if (user === null) {
+      return false;
+    }
+
+    return this.storage.hasSavedGame(user.id);
   }
 }

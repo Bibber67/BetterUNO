@@ -2,30 +2,59 @@
 
   <header class="game-header">
 
-    <h1>UNO</h1>
+    <h1>
+      UNO
+    </h1>
 
     @if (game) {
+
       <div class="game-status">
 
         @if (game.status === 'playing') {
+
           <span>
             Am Zug:
             <strong>
               {{ currentPlayer?.username }}
             </strong>
           </span>
+
+        }
+
+        @if (game.status === 'paused') {
+
+          <span>
+            Spiel pausiert
+          </span>
+
         }
 
         @if (game.status === 'finished') {
+
           <span>
             Spiel beendet
           </span>
+
         }
 
       </div>
+
+      @if (game.status !== 'finished') {
+
+        <button
+          class="pause-button"
+          type="button"
+          (click)="pauseGame()"
+        >
+          Pause
+        </button>
+
+      }
+
     }
 
   </header>
+
 
   @if (game && player) {
 
@@ -46,6 +75,7 @@
 
       </section>
 
+
       <section class="center-area">
 
         <div class="piles">
@@ -62,7 +92,11 @@
           >
 
             <div class="draw-card-back">
-              <span>UNO</span>
+
+              <span>
+                UNO
+              </span>
+
             </div>
 
             <span class="pile-label">
@@ -70,6 +104,7 @@
             </span>
 
           </button>
+
 
           <div class="discard-pile">
 
@@ -89,6 +124,7 @@
 
         </div>
 
+
         <div class="current-color">
 
           Aktuelle Farbe:
@@ -99,6 +135,7 @@
 
         </div>
 
+
         @if (errorMessage) {
 
           <div class="error-message">
@@ -106,6 +143,7 @@
           </div>
 
         }
+
 
         @if (
           showDrawnCardOption &&
@@ -133,6 +171,7 @@
           </div>
 
         }
+
 
         @if (selectedWildCard) {
 
@@ -188,6 +227,7 @@
 
       </section>
 
+
       <section class="player-area">
 
         <div class="player-name">
@@ -203,6 +243,7 @@
           }
 
         </div>
+
 
         <app-player-hand
           [cards]="player.hand"
@@ -221,6 +262,7 @@
     </div>
 
   }
+
 
   @if (winner) {
 
@@ -246,7 +288,10 @@
 
         </p>
 
-        @if (player && winner.id === player.id) {
+        @if (
+          player &&
+          winner.id === player.id
+        ) {
 
           <p>
             Glückwunsch, du hast gewonnen!

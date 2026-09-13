@@ -5,6 +5,8 @@ import {
   OnInit
 } from '@angular/core';
 
+import { ActivatedRoute, Router } from '@angular/router';
+
 import { Card, CardColor } from '../models/card';
 import { Game } from '../models/game';
 import { Player } from '../models/player';
@@ -13,7 +15,6 @@ import { GameService } from '../services/game.service';
 import { BotService } from '../services/bot.service';
 import { StorageService } from '../services/storage.service';
 import { Auth } from '../auth';
-import { Router } from '@angular/router';
 
 import { CardComponent } from './card/card';
 import { PlayerHandComponent } from './player-hand/player-hand';
@@ -52,12 +53,25 @@ export class GameComponent implements OnInit, OnDestroy {
   /*
    * Wird angezeigt, wenn die gezogene Karte
    * spielbar ist.
-   *
-   * Der Spieler kann dann entscheiden:
-   * - Karte spielen
-   * - Zug beenden
    */
   showDrawnCardOption = false;
+
+  /*
+   * Spielmodus:
+   *
+   * bot:
+   * Der eingeloggte Spieler spielt gegen Bots.
+   *
+   * local:
+   * Zwei echte Spieler spielen lokal
+   * am selben Rechner.
+   */
+  private gameMode: 'bot' | 'local' = 'bot';
+
+  /*
+   * Anzahl der Bots im Bot-Modus.
+   */
+  private botCount = 1;
 
   private botTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -67,91 +81,271 @@ export class GameComponent implements OnInit, OnDestroy {
 
   private readonly botDelay = 1000;
 
+
   constructor(
     private gameService: GameService,
     private botService: BotService,
     private changeDetector: ChangeDetectorRef,
     private auth: Auth,
     private storage: StorageService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
+
   async ngOnInit(): Promise<void> {
+
     console.log('[GAME] ngOnInit()');
 
-    const user = this.auth.user ?? await this.auth.checkSession();
+    const user =
+      this.auth.user ??
+      await this.auth.checkSession();
 
     if (user === null) {
+
       await this.router.navigateByUrl('/login');
+
       return;
     }
+
+
+    /*
+     * Prüfen, ob ein gespeichertes Spiel
+     * fortgesetzt werden soll.
+     */
+    const resume =
+      this.route.snapshot.queryParamMap.get(
+        'resume'
+      ) === 'true';
+
+
+    if (resume) {
+
+      this.resumeGame();
+
+      return;
+    }
+
+
+    /*
+     * Neuen Spielmodus aus der URL lesen.
+     *
+     * Beispiel:
+     *
+     * /game?mode=bot&bots=2
+     *
+     * oder:
+     *
+     * /game?mode=local&bots=0
+     */
+    this.gameMode =
+      this.route.snapshot.queryParamMap.get(
+        'mode'
+      ) === 'local'
+        ? 'local'
+        : 'bot';
+
+
+    const bots =
+      Number(
+        this.route.snapshot.queryParamMap.get(
+          'bots'
+        ) ?? '1'
+      );
+
+
+    /*
+     * Nur 1 bis 3 Bots erlauben.
+     */
+    this.botCount =
+      Number.isInteger(bots) &&
+      bots >= 1 &&
+      bots <= 3
+        ? bots
+        : 1;
+
 
     this.startGame();
   }
 
+
   ngOnDestroy(): void {
+
     console.log('[GAME] ngOnDestroy()');
 
-    if (this.botTimer !== null) {
-      console.log('[BOT] Timer wird gelöscht.');
 
-      clearTimeout(this.botTimer);
+    /*
+     * Wenn ein laufendes Spiel verlassen wird,
+     * speichern wir es automatisch.
+     */
+    this.saveGameIfPossible();
+
+
+    if (this.botTimer !== null) {
+
+      console.log(
+        '[BOT] Timer wird gelöscht.'
+      );
+
+      clearTimeout(
+        this.botTimer
+      );
 
       this.botTimer = null;
     }
 
+
     this.botTurnScheduled = false;
   }
 
-  startGame(): void {
-    console.log('[GAME] Starte neues Spiel.');
 
-    const user = this.auth.user;
+  startGame(): void {
+
+    console.log(
+      '[GAME] Starte neues Spiel.'
+    );
+
+
+    const user =
+      this.auth.user;
+
 
     if (user === null) {
-      void this.router.navigateByUrl('/login');
+
+      void this.router.navigateByUrl(
+        '/login'
+      );
+
       return;
     }
 
+
     this.gameResultSaved = false;
 
+
+    /*
+     * Zuerst kommt immer der eingeloggte
+     * Benutzer als Spieler 1.
+     */
     const players: Player[] = [
+
       {
         id: `user-${user.id}`,
+
         username: user.username,
+
         hand: [],
+
         isBot: false
-      },
-      {
-        id: '2',
-        username: 'Bot 1',
-        hand: [],
-        isBot: true
-      },
-      {
-        id: '3',
-        username: 'Bot 2',
-        hand: [],
-        isBot: true
       }
+
     ];
 
-    this.game =
-      this.gameService.startGame(players);
 
-    this.player =
-      this.game.players[0];
+    /*
+     * PvP:
+     *
+     * Genau zwei echte Spieler.
+     *
+     * Es werden KEINE Bots hinzugefügt.
+     */
+    if (
+      this.gameMode === 'local'
+    ) {
+
+      players.push({
+
+        id: 'local-player-2',
+
+        username: 'Spieler 2',
+
+        hand: [],
+
+        isBot: false
+
+      });
+
+    }
+
+
+    /*
+     * Bot-Modus:
+     *
+     * Je nach Auswahl 1, 2 oder 3 Bots.
+     */
+    else {
+
+      for (
+        let i = 1;
+        i <= this.botCount;
+        i++
+      ) {
+
+        players.push({
+
+          id: `bot-${i}`,
+
+          username: `Bot ${i}`,
+
+          hand: [],
+
+          isBot: true
+
+        });
+
+      }
+    }
+
+
+    console.log(
+      '[GAME] Spielmodus:',
+      this.gameMode
+    );
+
+    console.log(
+      '[GAME] Bot-Anzahl:',
+      this.botCount
+    );
+
+    console.log(
+      '[GAME] Spieler:',
+      players
+    );
+
+
+    /*
+     * Jetzt wird genau mit diesen Spielern
+     * das UNO-Spiel erstellt.
+     */
+    this.game =
+      this.gameService.startGame(
+        players
+      );
+
+
+    /*
+     * Der aktuell aktive Spieler wird
+     * für die Anzeige bestimmt.
+     */
+    this.updateActivePlayer();
+
 
     console.log(
       '[GAME] Spieler:',
       this.game.players.map(
         player => ({
+
           name: player.username,
+
           isBot: player.isBot,
-          cards: player.hand.length
+
+          cards:
+            player.hand.length
+
         })
       )
     );
+
 
     console.log(
       '[GAME] Startspieler:',
@@ -159,6 +353,7 @@ export class GameComponent implements OnInit, OnDestroy {
         this.game.currentPlayerIndex
       ].username
     );
+
 
     this.selectedWildCard = null;
 
@@ -168,6 +363,7 @@ export class GameComponent implements OnInit, OnDestroy {
 
     this.showDrawnCardOption = false;
 
+
     this.updatePlayableCards();
 
     this.checkForBotTurn();
@@ -175,34 +371,109 @@ export class GameComponent implements OnInit, OnDestroy {
     this.changeDetector.detectChanges();
   }
 
+
+  /*
+   * Aktualisiert den Spieler,
+   * dessen Hand gerade angezeigt werden soll.
+   *
+   * PvP:
+   * Der aktuell aktive menschliche Spieler
+   * wird angezeigt.
+   *
+   * Bot-Spiel:
+   * Immer der eingeloggte Benutzer.
+   */
+  private updateActivePlayer(): void {
+
+    if (this.game === null) {
+
+      this.player = null;
+
+      return;
+    }
+
+
+    const currentPlayer =
+      this.game.players[
+        this.game.currentPlayerIndex
+      ];
+
+
+    /*
+     * PvP:
+     *
+     * Die sichtbare Hand wechselt
+     * zwischen Spieler 1 und Spieler 2.
+     */
+    if (
+      this.gameMode === 'local'
+    ) {
+
+      this.player =
+        currentPlayer ?? null;
+
+      return;
+    }
+
+
+    /*
+     * Bot-Modus:
+     *
+     * Der eingeloggte Benutzer bleibt
+     * der menschliche Spieler.
+     */
+    const user =
+      this.auth.user;
+
+
+    this.player =
+      this.game.players.find(
+        player =>
+          player.id ===
+          `user-${user?.id}`
+      ) ?? null;
+  }
+
+
   updatePlayableCards(): void {
 
     if (
       this.game === null ||
       this.player === null
     ) {
+
       this.playableCards = [];
 
       return;
     }
+
 
     if (!this.isMyTurn) {
+
       this.playableCards = [];
 
       return;
     }
 
-    if (this.game.status !== 'playing') {
+
+    if (
+      this.game.status !== 'playing'
+    ) {
+
       this.playableCards = [];
 
       return;
     }
+
 
     this.playableCards =
       this.player.hand.filter(
         card =>
-          this.gameService.canPlayCard(card)
+          this.gameService.canPlayCard(
+            card
+          )
       );
+
 
     console.log(
       '[GAME] Spielbare Karten:',
@@ -212,7 +483,10 @@ export class GameComponent implements OnInit, OnDestroy {
     );
   }
 
-  onCardSelected(card: Card): void {
+
+  onCardSelected(
+    card: Card
+  ): void {
 
     console.log(
       '[PLAYER] Karte ausgewählt:',
@@ -221,14 +495,18 @@ export class GameComponent implements OnInit, OnDestroy {
       card.color
     );
 
+
     this.errorMessage = '';
+
 
     if (
       this.game === null ||
       this.player === null
     ) {
+
       return;
     }
+
 
     if (!this.isMyTurn) {
 
@@ -242,12 +520,19 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.game.status !== 'playing') {
+
+    if (
+      this.game.status !== 'playing'
+    ) {
+
       return;
     }
 
+
     if (
-      !this.gameService.canPlayCard(card)
+      !this.gameService.canPlayCard(
+        card
+      )
     ) {
 
       console.log(
@@ -260,24 +545,38 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (card.color === 'wild') {
+
+    /*
+     * Wild-Karte:
+     *
+     * Erst Farbe auswählen.
+     */
+    if (
+      card.color === 'wild'
+    ) {
 
       console.log(
         '[PLAYER] Wild-Karte ausgewählt.'
       );
 
-      this.selectedWildCard = card;
+      this.selectedWildCard =
+        card;
 
       return;
     }
 
+
     const success =
-      this.gameService.playCard(card);
+      this.gameService.playCard(
+        card
+      );
+
 
     console.log(
       '[PLAYER] playCard Ergebnis:',
       success
     );
+
 
     if (!success) {
 
@@ -287,26 +586,26 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
 
-    /*
-     * Karte wurde gespielt.
-     *
-     * Der Zug ist damit beendet.
-     */
+
     this.hasDrawnThisTurn = false;
 
     this.showDrawnCardOption = false;
 
+
     this.refreshGame();
+
 
     console.log(
       '[PLAYER] Nach meinem Zug ist dran:',
       this.currentPlayer?.username
     );
 
+
     this.checkForBotTurn();
 
     this.changeDetector.detectChanges();
   }
+
 
   chooseWildColor(
     color: CardColor
@@ -317,13 +616,22 @@ export class GameComponent implements OnInit, OnDestroy {
       color
     );
 
-    if (this.selectedWildCard === null) {
+
+    if (
+      this.selectedWildCard === null
+    ) {
+
       return;
     }
 
-    if (color === 'wild') {
+
+    if (
+      color === 'wild'
+    ) {
+
       return;
     }
+
 
     const success =
       this.gameService.playCard(
@@ -331,10 +639,12 @@ export class GameComponent implements OnInit, OnDestroy {
         color
       );
 
+
     console.log(
       '[PLAYER] Wild playCard Ergebnis:',
       success
     );
+
 
     if (!success) {
 
@@ -344,27 +654,28 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
 
-    /*
-     * Wild-Karte wurde gespielt.
-     * Der Zug ist beendet.
-     */
+
     this.hasDrawnThisTurn = false;
 
     this.showDrawnCardOption = false;
 
     this.selectedWildCard = null;
 
+
     this.refreshGame();
+
 
     console.log(
       '[PLAYER] Nach Wild-Karte ist dran:',
       this.currentPlayer?.username
     );
 
+
     this.checkForBotTurn();
 
     this.changeDetector.detectChanges();
   }
+
 
   cancelWildSelection(): void {
 
@@ -372,8 +683,10 @@ export class GameComponent implements OnInit, OnDestroy {
       '[PLAYER] Wild-Auswahl abgebrochen.'
     );
 
+
     this.selectedWildCard = null;
   }
+
 
   drawCard(): void {
 
@@ -381,14 +694,18 @@ export class GameComponent implements OnInit, OnDestroy {
       '[PLAYER] Ziehe eine Karte.'
     );
 
+
     this.errorMessage = '';
+
 
     if (
       this.game === null ||
       this.player === null
     ) {
+
       return;
     }
+
 
     if (!this.isMyTurn) {
 
@@ -402,13 +719,15 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.game.status !== 'playing') {
+
+    if (
+      this.game.status !== 'playing'
+    ) {
+
       return;
     }
 
-    /*
-     * Pro Zug darf nur einmal gezogen werden.
-     */
+
     if (this.hasDrawnThisTurn) {
 
       console.log(
@@ -421,18 +740,34 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
 
+
     /*
-     * Ab hier darf genau einmal gezogen werden.
+     * Nur ziehen, wenn keine spielbare
+     * Karte vorhanden ist.
      */
+    if (
+      this.playableCards.length > 0
+    ) {
+
+      this.errorMessage =
+        'Du hast noch eine spielbare Karte.';
+
+      return;
+    }
+
+
     this.hasDrawnThisTurn = true;
+
 
     const card =
       this.gameService.drawCard();
+
 
     console.log(
       '[PLAYER] Gezogene Karte:',
       card?.id ?? 'KEINE'
     );
+
 
     if (card === null) {
 
@@ -444,53 +779,54 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
 
-    /*
-     * Spielzustand aktualisieren.
-     */
+
     this.refreshGame();
 
+
     /*
-     * Die gezogene Karte ist spielbar.
-     *
-     * Jetzt darf der Spieler selbst entscheiden,
-     * ob er sie spielt oder den Zug beendet.
+     * Ist die gezogene Karte spielbar,
+     * darf der Spieler entscheiden.
      */
     if (
-      this.gameService.canPlayCard(card)
+      this.gameService.canPlayCard(
+        card
+      )
     ) {
 
       console.log(
         '[PLAYER] Gezogene Karte ist spielbar.'
       );
 
+
       this.showDrawnCardOption = true;
+
 
       this.errorMessage =
         'Du kannst die gezogene Karte spielen oder deinen Zug beenden.';
+
 
       this.changeDetector.detectChanges();
 
       return;
     }
 
+
     /*
-     * Die gezogene Karte ist nicht spielbar.
-     *
-     * Der Zug wird automatisch beendet.
+     * Nicht spielbar:
+     * Zug automatisch beenden.
      */
     console.log(
       '[PLAYER] Gezogene Karte ist nicht spielbar.'
     );
 
-    console.log(
-      '[PLAYER] Zug wird beendet.'
-    );
 
     this.gameService.endTurn();
+
 
     this.hasDrawnThisTurn = false;
 
     this.showDrawnCardOption = false;
+
 
     this.refreshGame();
 
@@ -499,25 +835,22 @@ export class GameComponent implements OnInit, OnDestroy {
     this.changeDetector.detectChanges();
   }
 
-  /*
-   * Beendet den eigenen Zug freiwillig.
-   *
-   * Dieser Fall tritt auf, wenn nach dem Ziehen
-   * die gezogene Karte spielbar ist, der Spieler
-   * sie aber nicht spielen möchte.
-   */
+
   endPlayerTurn(): void {
 
     console.log(
       '[PLAYER] Spieler beendet den Zug.'
     );
 
+
     if (
       this.game === null ||
       this.player === null
     ) {
+
       return;
     }
+
 
     if (!this.isMyTurn) {
 
@@ -528,14 +861,17 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.game.status !== 'playing') {
+
+    if (
+      this.game.status !== 'playing'
+    ) {
+
       return;
     }
 
-    /*
-     * Der Zug wird beendet.
-     */
+
     this.gameService.endTurn();
+
 
     this.hasDrawnThisTurn = false;
 
@@ -545,22 +881,262 @@ export class GameComponent implements OnInit, OnDestroy {
 
     this.errorMessage = '';
 
+
     this.refreshGame();
+
 
     console.log(
       '[PLAYER] Nach Zugende ist dran:',
       this.currentPlayer?.username
     );
 
+
     this.checkForBotTurn();
 
     this.changeDetector.detectChanges();
   }
 
+
+  /*
+   * Spiel pausieren und speichern.
+   */
+  pauseGame(): void {
+
+    if (
+      this.game === null ||
+      this.game.status !== 'playing'
+    ) {
+
+      return;
+    }
+
+
+    console.log(
+      '[GAME] Spiel wird pausiert.'
+    );
+
+
+    /*
+     * Eventuellen Bot-Timer stoppen.
+     */
+    if (
+      this.botTimer !== null
+    ) {
+
+      clearTimeout(
+        this.botTimer
+      );
+
+      this.botTimer = null;
+    }
+
+
+    this.botTurnScheduled = false;
+
+
+    /*
+     * Spielstatus ändern.
+     */
+    this.gameService.pauseGame();
+
+
+    /*
+     * Spiel speichern.
+     */
+    this.saveGameIfPossible();
+
+
+    /*
+     * Zur Startseite.
+     */
+    void this.router.navigateByUrl(
+      '/home'
+    );
+  }
+
+
+  /*
+   * Gespeichertes Spiel fortsetzen.
+   */
+  private resumeGame(): void {
+
+    const user =
+      this.auth.user;
+
+
+    if (user === null) {
+
+      void this.router.navigateByUrl(
+        '/login'
+      );
+
+      return;
+    }
+
+
+    const savedGame =
+      this.storage.getSavedGame(
+        user.id
+      );
+
+
+    if (savedGame === null) {
+
+      console.log(
+        '[GAME] Kein gespeichertes Spiel gefunden.'
+      );
+
+      void this.router.navigateByUrl(
+        '/home'
+      );
+
+      return;
+    }
+
+
+    console.log(
+      '[GAME] Gespeichertes Spiel wird geladen.'
+    );
+
+
+    /*
+     * Gespeichertes Game wieder in
+     * den GameService laden.
+     */
+    this.game =
+      this.gameService.loadGame(
+        savedGame
+      );
+
+
+    /*
+     * Den Modus aus dem gespeicherten
+     * Spiel bestimmen.
+     */
+    const humanPlayers =
+      this.game.players.filter(
+        player => !player.isBot
+      ).length;
+
+
+    this.gameMode =
+      humanPlayers === 2
+        ? 'local'
+        : 'bot';
+
+
+    /*
+     * Botanzahl aus dem gespeicherten
+     * Spiel bestimmen.
+     */
+    this.botCount =
+      this.game.players.filter(
+        player => player.isBot
+      ).length;
+
+
+    /*
+     * Falls das gespeicherte Spiel pausiert
+     * war, wird es wieder gestartet.
+     */
+    if (
+      this.game.status === 'paused'
+    ) {
+
+      this.gameService.resumeGame();
+    }
+
+
+    this.gameResultSaved = false;
+
+    this.selectedWildCard = null;
+
+    this.errorMessage = '';
+
+    this.hasDrawnThisTurn = false;
+
+    this.showDrawnCardOption = false;
+
+
+    this.updateActivePlayer();
+
+    this.updatePlayableCards();
+
+
+    this.changeDetector.detectChanges();
+
+
+    /*
+     * Falls nach dem Fortsetzen ein Bot
+     * dran ist, soll dieser wieder spielen.
+     */
+    this.checkForBotTurn();
+  }
+
+
+  /*
+   * Aktuellen Spielstand speichern.
+   */
+  private saveGameIfPossible(): void {
+
+    const user =
+      this.auth.user;
+
+
+    if (
+      user === null ||
+      this.game === null
+    ) {
+
+      return;
+    }
+
+
+    /*
+     * Fertige Spiele werden nicht als
+     * fortsetzbares Spiel gespeichert.
+     */
+    if (
+      this.game.status === 'finished'
+    ) {
+
+      this.storage.clearSavedGame(
+        user.id
+      );
+
+      return;
+    }
+
+
+    /*
+     * Ein laufendes Spiel wird beim
+     * Verlassen automatisch pausiert.
+     */
+    if (
+      this.game.status === 'playing'
+    ) {
+
+      this.gameService.pauseGame();
+    }
+
+
+    this.storage.saveGame(
+      user.id,
+      this.game
+    );
+
+
+    console.log(
+      '[GAME] Spiel gespeichert.'
+    );
+  }
+
+
   refreshGame(): void {
 
     const currentGame =
       this.gameService.getCurrentGame();
+
 
     if (currentGame === null) {
 
@@ -568,20 +1144,23 @@ export class GameComponent implements OnInit, OnDestroy {
         '[GAME] Kein aktives Spiel.'
       );
 
+
       this.game = null;
 
       this.player = null;
 
       this.playableCards = [];
 
+
       this.changeDetector.detectChanges();
 
       return;
     }
 
+
     /*
-     * Neue Objekte erzeugen, damit Angular
-     * die Änderungen zuverlässig erkennt.
+     * Kopien erzeugen, damit Angular
+     * Änderungen zuverlässig erkennt.
      */
     this.game = {
 
@@ -610,70 +1189,121 @@ export class GameComponent implements OnInit, OnDestroy {
 
     };
 
-    this.player =
-      this.game.players[0];
+
+    /*
+     * Wichtig:
+     * Nicht mehr einfach players[0].
+     *
+     * Bei PvP muss die aktuell aktive
+     * menschliche Hand angezeigt werden.
+     */
+    this.updateActivePlayer();
+
 
     this.handleFinishedGame();
+
 
     console.log(
       '[GAME] refreshGame()'
     );
+
 
     console.log(
       '[GAME] Aktueller Spieler:',
       this.currentPlayer?.username
     );
 
+
     console.log(
       '[GAME] Oberste Ablagekarte:',
       this.topCard?.id
     );
+
 
     console.log(
       '[GAME] Spielerstände:',
       this.game.players.map(
         player => ({
 
-          name: player.username,
+          name:
+            player.username,
 
-          cards: player.hand.length,
+          cards:
+            player.hand.length,
 
-          isBot: player.isBot
+          isBot:
+            player.isBot
 
         })
       )
     );
+
 
     this.updatePlayableCards();
 
     this.changeDetector.detectChanges();
   }
 
+
   private handleFinishedGame(): void {
-    if (this.game === null || this.game.status !== 'finished') {
+
+    if (
+      this.game === null ||
+      this.game.status !== 'finished'
+    ) {
+
       return;
     }
 
-    if (this.gameResultSaved) {
+
+    if (
+      this.gameResultSaved
+    ) {
+
       return;
     }
 
-    const winner = this.game.players.find(
-      player => player.hand.length === 0
-    );
 
-    if (winner === undefined) {
+    const winner =
+      this.game.players.find(
+        player =>
+          player.hand.length === 0
+      );
+
+
+    if (
+      winner === undefined
+    ) {
+
       return;
     }
+
 
     this.gameResultSaved = true;
 
-    const user = this.auth.user;
 
-    if (user !== null && winner.id === `user-${user.id}`) {
-      this.storage.addWin(user.id);
+    const user =
+      this.auth.user;
 
-      this.auth.user = this.storage.getCurrentUser();
+
+    /*
+     * Nur wenn der eingeloggte Benutzer
+     * gewonnen hat, wird ein Sieg gezählt.
+     */
+    if (
+      user !== null &&
+      winner.id ===
+        `user-${user.id}`
+    ) {
+
+      this.storage.addWin(
+        user.id
+      );
+
+
+      this.auth.user =
+        this.storage.getCurrentUser();
+
 
       console.log(
         '[GAME] Sieg gespeichert für:',
@@ -681,18 +1311,35 @@ export class GameComponent implements OnInit, OnDestroy {
       );
     }
 
+
+    /*
+     * Fertiges Spiel aus den gespeicherten
+     * Spielen entfernen.
+     */
+    if (user !== null) {
+
+      this.storage.clearSavedGame(
+        user.id
+      );
+    }
+
+
     console.log(
       '[GAME] Gewinner:',
       winner.username
     );
   }
 
+
   private checkForBotTurn(): void {
 
     const currentGame =
       this.gameService.getCurrentGame();
 
-    if (currentGame === null) {
+
+    if (
+      currentGame === null
+    ) {
 
       console.log(
         '[BOT] Kein Spiel vorhanden.'
@@ -701,7 +1348,10 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (currentGame.status !== 'playing') {
+
+    if (
+      currentGame.status !== 'playing'
+    ) {
 
       console.log(
         '[BOT] Spiel ist nicht mehr aktiv.'
@@ -710,12 +1360,31 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
 
+
+    /*
+     * Im PvP gibt es überhaupt keine Bots.
+     */
+    if (
+      this.gameMode === 'local'
+    ) {
+
+      console.log(
+        '[BOT] PvP-Modus. Keine Bot-Züge.'
+      );
+
+      return;
+    }
+
+
     const currentPlayer =
       currentGame.players[
         currentGame.currentPlayerIndex
       ];
 
-    if (currentPlayer === undefined) {
+
+    if (
+      currentPlayer === undefined
+    ) {
 
       console.error(
         '[BOT] Kein aktueller Spieler gefunden!'
@@ -724,6 +1393,7 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
 
+
     console.log(
       '[BOT] checkForBotTurn():',
       currentPlayer.username,
@@ -731,7 +1401,10 @@ export class GameComponent implements OnInit, OnDestroy {
       currentPlayer.isBot
     );
 
-    if (!currentPlayer.isBot) {
+
+    if (
+      !currentPlayer.isBot
+    ) {
 
       console.log(
         '[BOT] Mensch ist dran. Kein Bot-Zug.'
@@ -740,7 +1413,10 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.botTurnScheduled) {
+
+    if (
+      this.botTurnScheduled
+    ) {
 
       console.log(
         '[BOT] Bot-Zug ist bereits geplant.'
@@ -749,10 +1425,12 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
 
+
     console.log(
       '[BOT] Bot-Zug wird geplant für:',
       currentPlayer.username
     );
+
 
     console.log(
       '[BOT] Wartezeit:',
@@ -760,16 +1438,20 @@ export class GameComponent implements OnInit, OnDestroy {
       'ms'
     );
 
+
     this.botTurnScheduled = true;
+
 
     const timerStart =
       performance.now();
+
 
     this.botTimer =
       setTimeout(() => {
 
         const timerEnd =
           performance.now();
+
 
         console.log(
           '[BOT] Timer ausgelöst nach:',
@@ -779,12 +1461,15 @@ export class GameComponent implements OnInit, OnDestroy {
           'ms'
         );
 
+
         this.botTimer = null;
 
         this.botTurnScheduled = false;
 
+
         const gameBeforeBot =
           this.gameService.getCurrentGame();
+
 
         if (
           gameBeforeBot === null ||
@@ -798,10 +1483,12 @@ export class GameComponent implements OnInit, OnDestroy {
           return;
         }
 
+
         const currentPlayerBeforeBot =
           gameBeforeBot.players[
             gameBeforeBot.currentPlayerIndex
           ];
+
 
         if (
           currentPlayerBeforeBot === undefined
@@ -814,17 +1501,22 @@ export class GameComponent implements OnInit, OnDestroy {
           return;
         }
 
+
         console.log(
           '[BOT] Vor Bot-Zug:',
           currentPlayerBeforeBot.username
         );
+
 
         console.log(
           '[BOT] Karten des Bots:',
           currentPlayerBeforeBot.hand.length
         );
 
-        if (!currentPlayerBeforeBot.isBot) {
+
+        if (
+          !currentPlayerBeforeBot.isBot
+        ) {
 
           console.warn(
             '[BOT] Spieler ist plötzlich kein Bot mehr!'
@@ -835,21 +1527,27 @@ export class GameComponent implements OnInit, OnDestroy {
           return;
         }
 
+
         const botStart =
           performance.now();
+
 
         console.log(
           '[BOT] >>> playBotTurn() START'
         );
 
+
         this.botService.playBotTurn();
+
 
         const botEnd =
           performance.now();
 
+
         console.log(
           '[BOT] <<< playBotTurn() ENDE'
         );
+
 
         console.log(
           '[BOT] Dauer playBotTurn():',
@@ -859,10 +1557,14 @@ export class GameComponent implements OnInit, OnDestroy {
           'ms'
         );
 
+
         const gameAfterBot =
           this.gameService.getCurrentGame();
 
-        if (gameAfterBot === null) {
+
+        if (
+          gameAfterBot === null
+        ) {
 
           console.error(
             '[BOT] Nach Bot-Zug kein Spiel vorhanden!'
@@ -871,15 +1573,18 @@ export class GameComponent implements OnInit, OnDestroy {
           return;
         }
 
+
         const playerAfterBot =
           gameAfterBot.players[
             gameAfterBot.currentPlayerIndex
           ];
 
+
         console.log(
           '[BOT] Nach Bot-Zug ist dran:',
           playerAfterBot?.username
         );
+
 
         console.log(
           '[BOT] Oberste Ablagekarte nach Bot:',
@@ -888,64 +1593,83 @@ export class GameComponent implements OnInit, OnDestroy {
           ]?.id
         );
 
+
         console.log(
           '[BOT] Spielerstände nach Bot:',
           gameAfterBot.players.map(
             player => ({
 
-              name: player.username,
+              name:
+                player.username,
 
-              cards: player.hand.length
+              cards:
+                player.hand.length
 
             })
           )
         );
+
 
         console.log(
           '[BOT] Richtung:',
           gameAfterBot.direction
         );
 
+
         console.log(
           '[BOT] Status:',
           gameAfterBot.status
         );
 
+
         /*
-         * Spielzustand aus dem Service neu
-         * in die UI übernehmen.
+         * Spielzustand aus dem Service
+         * wieder in die UI übernehmen.
          */
         this.refreshGame();
 
+
         this.changeDetector.detectChanges();
+
 
         console.log(
           '[BOT] Prüfe nächsten Spieler...'
         );
 
+
         this.checkForBotTurn();
+
 
       }, this.botDelay);
   }
 
+
   /*
-   * Navigiert nach beendetem Spiel zurück
-   * zur Startseite.
+   * Nach beendetem Spiel zurück zur Startseite.
    */
   goHome(): void {
-    void this.router.navigateByUrl('/home');
+
+    void this.router.navigateByUrl(
+      '/home'
+    );
   }
+
 
   get currentPlayer(): Player | null {
 
-    if (this.game === null) {
+    if (
+      this.game === null
+    ) {
+
       return null;
     }
+
 
     return this.game.players[
       this.game.currentPlayerIndex
     ] ?? null;
   }
+
 
   get topCard(): Card | null {
 
@@ -953,35 +1677,52 @@ export class GameComponent implements OnInit, OnDestroy {
       this.game === null ||
       this.game.discardPile.length === 0
     ) {
+
       return null;
     }
+
 
     return this.game.discardPile[
       this.game.discardPile.length - 1
     ] ?? null;
   }
 
+
   get winner(): Player | null {
-    if (this.game === null || this.game.status !== 'finished') {
+
+    if (
+      this.game === null ||
+      this.game.status !== 'finished'
+    ) {
+
       return null;
     }
 
+
     return this.game.players.find(
-      player => player.hand.length === 0
+      player =>
+        player.hand.length === 0
     ) ?? null;
   }
 
+
   get opponents(): Player[] {
 
-    if (this.game === null) {
+    if (
+      this.game === null
+    ) {
+
       return [];
     }
 
+
     return this.game.players.filter(
       player =>
-        player.id !== this.player?.id
+        player.id !==
+        this.player?.id
     );
   }
+
 
   get isMyTurn(): boolean {
 
@@ -989,20 +1730,28 @@ export class GameComponent implements OnInit, OnDestroy {
       this.game === null ||
       this.player === null
     ) {
+
       return false;
     }
+
 
     const currentPlayer =
       this.game.players[
         this.game.currentPlayerIndex
       ];
 
-    if (currentPlayer === undefined) {
+
+    if (
+      currentPlayer === undefined
+    ) {
+
       return false;
     }
 
+
     return (
-      currentPlayer.id === this.player.id
+      currentPlayer.id ===
+      this.player.id
     );
   }
 }
