@@ -10,5 +10,6 @@ import { RouterLink } from '@angular/router';
   templateUrl: './home-component.html',
 })
 export class HomeComponent {
+  userName:string = "GeorgeDroid"
   // auth = inject(Auth);
 }
