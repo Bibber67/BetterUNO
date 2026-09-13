@@ -40,6 +40,22 @@ export class GameComponent implements OnInit, OnDestroy {
 
   errorMessage = '';
 
+  /*
+   * Speichert, ob der Spieler in seinem
+   * aktuellen Zug bereits gezogen hat.
+   */
+  hasDrawnThisTurn = false;
+
+  /*
+   * Wird angezeigt, wenn die gezogene Karte
+   * spielbar ist.
+   *
+   * Der Spieler kann dann entscheiden:
+   * - Karte spielen
+   * - Zug beenden
+   */
+  showDrawnCardOption = false;
+
   private botTimer: ReturnType<typeof setTimeout> | null = null;
 
   private botTurnScheduled = false;
@@ -123,6 +139,10 @@ export class GameComponent implements OnInit, OnDestroy {
     this.selectedWildCard = null;
 
     this.errorMessage = '';
+
+    this.hasDrawnThisTurn = false;
+
+    this.showDrawnCardOption = false;
 
     this.updatePlayableCards();
 
@@ -243,6 +263,15 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
 
+    /*
+     * Karte wurde gespielt.
+     *
+     * Der Zug ist damit beendet.
+     */
+    this.hasDrawnThisTurn = false;
+
+    this.showDrawnCardOption = false;
+
     this.refreshGame();
 
     console.log(
@@ -290,6 +319,14 @@ export class GameComponent implements OnInit, OnDestroy {
 
       return;
     }
+
+    /*
+     * Wild-Karte wurde gespielt.
+     * Der Zug ist beendet.
+     */
+    this.hasDrawnThisTurn = false;
+
+    this.showDrawnCardOption = false;
 
     this.selectedWildCard = null;
 
@@ -345,6 +382,31 @@ export class GameComponent implements OnInit, OnDestroy {
       return;
     }
 
+    /*
+     * Pro Zug darf nur einmal gezogen werden.
+     */
+    if (this.hasDrawnThisTurn) {
+
+      console.log(
+        '[PLAYER] Bereits in diesem Zug gezogen.'
+      );
+
+      this.errorMessage =
+        'Du hast in diesem Zug bereits gezogen.';
+
+      return;
+    }
+
+    /*
+     * Wenn noch eine spielbare Karte auf der Hand
+     * vorhanden ist, darf nicht gezogen werden.
+     */
+
+    /*
+     * Ab hier darf genau einmal gezogen werden.
+     */
+    this.hasDrawnThisTurn = true;
+
     const card =
       this.gameService.drawCard();
 
@@ -355,13 +417,123 @@ export class GameComponent implements OnInit, OnDestroy {
 
     if (card === null) {
 
+      this.hasDrawnThisTurn = false;
+
       this.errorMessage =
         'Es konnte keine Karte gezogen werden.';
 
       return;
     }
 
+    /*
+     * Spielzustand aktualisieren.
+     */
     this.refreshGame();
+
+    /*
+     * Die gezogene Karte ist spielbar.
+     *
+     * Jetzt darf der Spieler selbst entscheiden,
+     * ob er sie spielt oder den Zug beendet.
+     */
+    if (
+      this.gameService.canPlayCard(card)
+    ) {
+
+      console.log(
+        '[PLAYER] Gezogene Karte ist spielbar.'
+      );
+
+      this.showDrawnCardOption = true;
+
+      this.errorMessage =
+        'Du kannst die gezogene Karte spielen oder deinen Zug beenden.';
+
+      this.changeDetector.detectChanges();
+
+      return;
+    }
+
+    /*
+     * Die gezogene Karte ist nicht spielbar.
+     *
+     * Der Zug wird automatisch beendet.
+     */
+    console.log(
+      '[PLAYER] Gezogene Karte ist nicht spielbar.'
+    );
+
+    console.log(
+      '[PLAYER] Zug wird beendet.'
+    );
+
+    this.gameService.endTurn();
+
+    this.hasDrawnThisTurn = false;
+
+    this.showDrawnCardOption = false;
+
+    this.refreshGame();
+
+    this.checkForBotTurn();
+
+    this.changeDetector.detectChanges();
+  }
+
+  /*
+   * Beendet den eigenen Zug freiwillig.
+   *
+   * Dieser Fall tritt auf, wenn nach dem Ziehen
+   * die gezogene Karte spielbar ist, der Spieler
+   * sie aber nicht spielen möchte.
+   */
+  endPlayerTurn(): void {
+
+    console.log(
+      '[PLAYER] Spieler beendet den Zug.'
+    );
+
+    if (
+      this.game === null ||
+      this.player === null
+    ) {
+      return;
+    }
+
+    if (!this.isMyTurn) {
+
+      console.log(
+        '[PLAYER] Kann Zug nicht beenden: nicht am Zug.'
+      );
+
+      return;
+    }
+
+    if (this.game.status !== 'playing') {
+      return;
+    }
+
+    /*
+     * Der Zug wird beendet.
+     */
+    this.gameService.endTurn();
+
+    this.hasDrawnThisTurn = false;
+
+    this.showDrawnCardOption = false;
+
+    this.selectedWildCard = null;
+
+    this.errorMessage = '';
+
+    this.refreshGame();
+
+    console.log(
+      '[PLAYER] Nach Zugende ist dran:',
+      this.currentPlayer?.username
+    );
+
+    this.checkForBotTurn();
 
     this.changeDetector.detectChanges();
   }
@@ -389,11 +561,8 @@ export class GameComponent implements OnInit, OnDestroy {
     }
 
     /*
-     * Wir erstellen bewusst neue Objekte für
-     * Game, Player, Hand, DrawPile und DiscardPile.
-     *
-     * Dadurch bekommt Angular neue Referenzen
-     * und kann die Änderungen zuverlässig erkennen.
+     * Neue Objekte erzeugen, damit Angular
+     * die Änderungen zuverlässig erkennt.
      */
     this.game = {
 
@@ -456,12 +625,6 @@ export class GameComponent implements OnInit, OnDestroy {
 
     this.updatePlayableCards();
 
-    /*
-     * Wichtig:
-     * Nach einem automatischen Bot-Zug
-     * erzwingen wir hier eine Aktualisierung
-     * der Angular-Ansicht.
-     */
     this.changeDetector.detectChanges();
   }
 
@@ -690,15 +853,11 @@ export class GameComponent implements OnInit, OnDestroy {
         );
 
         /*
-         * Spielzustand aus dem Service neu in
-         * die UI übernehmen.
+         * Spielzustand aus dem Service neu
+         * in die UI übernehmen.
          */
         this.refreshGame();
 
-        /*
-         * Zusätzliche explizite Angular-
-         * Änderungserkennung.
-         */
         this.changeDetector.detectChanges();
 
         console.log(
