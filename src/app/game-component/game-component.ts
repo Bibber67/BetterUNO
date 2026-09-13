@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { GameService } from "../services/game.service"
 
 @Component({
   imports: [],
@@ -6,4 +7,6 @@ import { Component } from '@angular/core';
   styleUrl: './game-component.css',
   templateUrl: './game-component.html',
 })
-export class GameComponent {}
+export class GameComponent {
+  constructor(private gameService: GameService) {}
+}
