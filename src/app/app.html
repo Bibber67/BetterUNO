@@ -1,23 +1,30 @@
 <header class="topbar">
-    <a class="icon" routerLink="/home">
-        <span class="iconImage">
-          <img id="logoImage" src="/uno_logo.png" alt="Logo">
-        </span>
-        <b>UNO Lokal</b>
-    </a>
-    @if (true) {<!-- @if (auth.user) { -->
-        <nav class="iconImage">
-            <a routerLink="/home">
-              <img src="/home.png" alt="Home">
-            </a>
-            <a routerLink="/leaderboard">
-              <img src="/ranking.png" alt="Leaderboard">
-            </a>
-            <button><!-- <button class="link-button" (click)="logout()"> -->
-              <img src="/logout.png" alt="Logout">
-            </button>
-        </nav>
-    }
+  <a class="icon" routerLink="/home">
+    <span class="iconImage">
+      <img id="logoImage" src="/uno_logo.png" alt="Logo">
+    </span>
+    <b>UNO Lokal</b>
+  </a>
+
+  @if (auth.user) {
+    <nav class="iconImage">
+      <a routerLink="/home">
+        <img src="/home.png" alt="Home">
+      </a>
+
+      <a routerLink="/leaderboard">
+        <img src="/ranking.png" alt="Leaderboard">
+      </a>
+
+      <button
+        class="link-button"
+        type="button"
+        (click)="logout()"
+      >
+        <img src="/logout.png" alt="Logout">
+      </button>
+    </nav>
+  }
 </header>
 
 <router-outlet />

@@ -1,7 +1,6 @@
-import { Component } from '@angular/core';
-import { inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-
+import { Auth } from '../auth';
 
 @Component({
   imports: [RouterLink],
@@ -10,6 +9,13 @@ import { RouterLink } from '@angular/router';
   templateUrl: './home-component.html',
 })
 export class HomeComponent {
-  userName:string = "GeorgeDroid"
-  // auth = inject(Auth);
+  readonly auth = inject(Auth);
+
+  get userName(): string {
+    return this.auth.user?.username ?? 'Spieler';
+  }
+
+  get wins(): number {
+    return this.auth.user?.wins ?? 0;
+  }
 }

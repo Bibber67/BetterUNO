@@ -8,25 +8,24 @@ import { Leaderboard } from '../leaderboard';
   styleUrl: './leaderboard-component.css',
   templateUrl: './leaderboard-component.html',
 })
-
 export class LeaderboardComponent {
-    lead = inject(Leaderboard);
+  private readonly lead = inject(Leaderboard);
 
-    rows: LeaderboardEntry[] = [];
-    loading = true;
-    error = '';
+  rows: LeaderboardEntry[] = [];
+  loading = true;
+  error = '';
 
-    constructor() {
-        this.loadLeaderboard();
-    }
+  constructor() {
+    void this.loadLeaderboard();
+  }
 
-async loadLeaderboard(): Promise<void> {
+  async loadLeaderboard(): Promise<void> {
     try {
-        this.rows = await this.lead.getLeaderboard();
+      this.rows = await this.lead.getLeaderboard();
     } catch {
-        this.error = 'Die Rangliste konnte nicht geladen werden.';
+      this.error = 'Die Rangliste konnte nicht geladen werden.';
     } finally {
-        this.loading = false;
+      this.loading = false;
     }
-}
+  }
 }

@@ -1,78 +1,99 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
 import { User } from './user';
+import { StorageService, StoredUser } from './services/storage.service';
 
 @Injectable({ providedIn: 'root' })
 export class Auth {
-    http = inject(HttpClient);
+  private readonly storage = inject(StorageService);
 
-    user: User | null = null;
-    sessionReady = false;
+  user: User | null = null;
+  sessionReady = false;
 
-    async checkSession(): Promise<User | null> {
-        try {
-            const user = await firstValueFrom(
-                this.http.get<User>('/api/user')
-            );
+  async checkSession(): Promise<User | null> {
+    this.user = this.storage.getCurrentUser();
+    this.sessionReady = true;
+    return this.user;
+  }
 
-            this.user = user;
-            return user;
-        } catch {
-            this.user = null;
-            return null;
-        } finally {
-            this.sessionReady = true;
-        }
+  async register(username: string, password: string): Promise<User> {
+    const cleanUsername = username.trim();
+
+    if (!cleanUsername) {
+      throw new Error('Bitte gib einen Benutzernamen ein.');
     }
 
-    async register(username: string, password: string): Promise<User> {
-        const user = await firstValueFrom(
-            this.http.post<User>('/api/auth/register', {
-                username,
-                password
-            })
-        );
-
-        this.user = user;
-        this.sessionReady = true;
-
-        return user;
+    if (!password) {
+      throw new Error('Bitte gib ein Passwort ein.');
     }
 
-    async login(username: string, password: string): Promise<User> {
-        const user = await firstValueFrom(
-            this.http.post<User>('/api/auth/login', {
-                username,
-                password
-            })
-        );
-
-        this.user = user;
-        this.sessionReady = true;
-
-        return user;
+    if (this.storage.getUserByUsername(cleanUsername) !== null) {
+      throw new Error('Dieser Benutzername ist bereits vergeben.');
     }
 
-    async logout(): Promise<void> {
-        await firstValueFrom(
-            this.http.post<void>('/api/auth/logout', {})
-        );
+    const user: User = {
+      id: Date.now(),
+      username: cleanUsername,
+      wins: 0,
+      hasSavedGame: false
+    };
 
-        this.user = null;
+    const storedUser: StoredUser = {
+      ...user,
+      password
+    };
+
+    this.storage.addUser(storedUser);
+    this.storage.saveCurrentUser(user);
+
+    this.user = user;
+    this.sessionReady = true;
+
+    return user;
+  }
+
+  async login(username: string, password: string): Promise<User> {
+    const cleanUsername = username.trim();
+    const storedUser =
+      this.storage.getUserByUsername(cleanUsername);
+
+    if (storedUser === null) {
+      throw new Error('Benutzername oder Passwort ist falsch.');
     }
 
-    isLoggedIn(): boolean {
-        return this.user !== null;
+    if (storedUser.password !== password) {
+      throw new Error('Benutzername oder Passwort ist falsch.');
     }
 
-    getError(error: unknown): string {
-        const response = error as HttpErrorResponse;
+    const user: User = {
+      id: storedUser.id,
+      username: storedUser.username,
+      wins: storedUser.wins,
+      hasSavedGame: storedUser.hasSavedGame
+    };
 
-        if (response?.error?.message) {
-            return response.error.message;
-        }
+    this.storage.saveCurrentUser(user);
 
-        return 'Die API ist momentan nicht erreichbar.';
+    this.user = user;
+    this.sessionReady = true;
+
+    return user;
+  }
+
+  async logout(): Promise<void> {
+    this.storage.clearCurrentUser();
+    this.user = null;
+    this.sessionReady = true;
+  }
+
+  isLoggedIn(): boolean {
+    return this.user !== null;
+  }
+
+  getError(error: unknown): string {
+    if (error instanceof Error && error.message) {
+      return error.message;
     }
+
+    return 'Anmeldung fehlgeschlagen.';
+  }
 }

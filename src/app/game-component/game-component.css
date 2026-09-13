@@ -350,3 +350,76 @@
   }
 
 }
+
+
+.drawn-card-option {
+  margin-top: 20px;
+  padding: 16px 20px;
+  text-align: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.drawn-card-option h3 {
+  margin: 0 0 8px;
+}
+
+.drawn-card-option p {
+  margin: 0 0 14px;
+}
+
+.end-turn-button,
+.home-button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.end-turn-button:hover,
+.home-button:hover {
+  filter: brightness(1.08);
+}
+
+.game-over-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.game-over-card {
+  width: min(420px, 100%);
+  padding: 35px;
+  text-align: center;
+  border-radius: 18px;
+  background: #ffffff;
+  color: #222;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4);
+}
+
+.game-over-title {
+  font-size: 50px;
+}
+
+.game-over-card h2 {
+  margin: 10px 0;
+  font-size: 30px;
+}
+
+.winner-text {
+  font-size: 22px;
+  margin: 20px 0 10px;
+}
+
+.home-button {
+  margin-top: 20px;
+  background: #2e7d32;
+  color: white;
+}

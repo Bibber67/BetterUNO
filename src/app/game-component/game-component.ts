@@ -11,6 +11,9 @@ import { Player } from '../models/player';
 
 import { GameService } from '../services/game.service';
 import { BotService } from '../services/bot.service';
+import { StorageService } from '../services/storage.service';
+import { Auth } from '../auth';
+import { Router } from '@angular/router';
 
 import { CardComponent } from './card/card';
 import { PlayerHandComponent } from './player-hand/player-hand';
@@ -58,6 +61,8 @@ export class GameComponent implements OnInit, OnDestroy {
 
   private botTimer: ReturnType<typeof setTimeout> | null = null;
 
+  private gameResultSaved = false;
+
   private botTurnScheduled = false;
 
   private readonly botDelay = 1000;
@@ -65,11 +70,21 @@ export class GameComponent implements OnInit, OnDestroy {
   constructor(
     private gameService: GameService,
     private botService: BotService,
-    private changeDetector: ChangeDetectorRef
+    private changeDetector: ChangeDetectorRef,
+    private auth: Auth,
+    private storage: StorageService,
+    private router: Router
   ) {}
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     console.log('[GAME] ngOnInit()');
+
+    const user = this.auth.user ?? await this.auth.checkSession();
+
+    if (user === null) {
+      await this.router.navigateByUrl('/login');
+      return;
+    }
 
     this.startGame();
   }
@@ -91,10 +106,19 @@ export class GameComponent implements OnInit, OnDestroy {
   startGame(): void {
     console.log('[GAME] Starte neues Spiel.');
 
+    const user = this.auth.user;
+
+    if (user === null) {
+      void this.router.navigateByUrl('/login');
+      return;
+    }
+
+    this.gameResultSaved = false;
+
     const players: Player[] = [
       {
-        id: '1',
-        username: 'Elias',
+        id: `user-${user.id}`,
+        username: user.username,
         hand: [],
         isBot: false
       },
@@ -398,11 +422,6 @@ export class GameComponent implements OnInit, OnDestroy {
     }
 
     /*
-     * Wenn noch eine spielbare Karte auf der Hand
-     * vorhanden ist, darf nicht gezogen werden.
-     */
-
-    /*
      * Ab hier darf genau einmal gezogen werden.
      */
     this.hasDrawnThisTurn = true;
@@ -594,6 +613,8 @@ export class GameComponent implements OnInit, OnDestroy {
     this.player =
       this.game.players[0];
 
+    this.handleFinishedGame();
+
     console.log(
       '[GAME] refreshGame()'
     );
@@ -626,6 +647,44 @@ export class GameComponent implements OnInit, OnDestroy {
     this.updatePlayableCards();
 
     this.changeDetector.detectChanges();
+  }
+
+  private handleFinishedGame(): void {
+    if (this.game === null || this.game.status !== 'finished') {
+      return;
+    }
+
+    if (this.gameResultSaved) {
+      return;
+    }
+
+    const winner = this.game.players.find(
+      player => player.hand.length === 0
+    );
+
+    if (winner === undefined) {
+      return;
+    }
+
+    this.gameResultSaved = true;
+
+    const user = this.auth.user;
+
+    if (user !== null && winner.id === `user-${user.id}`) {
+      this.storage.addWin(user.id);
+
+      this.auth.user = this.storage.getCurrentUser();
+
+      console.log(
+        '[GAME] Sieg gespeichert für:',
+        user.username
+      );
+    }
+
+    console.log(
+      '[GAME] Gewinner:',
+      winner.username
+    );
   }
 
   private checkForBotTurn(): void {
@@ -869,6 +928,14 @@ export class GameComponent implements OnInit, OnDestroy {
       }, this.botDelay);
   }
 
+  /*
+   * Navigiert nach beendetem Spiel zurück
+   * zur Startseite.
+   */
+  goHome(): void {
+    void this.router.navigateByUrl('/home');
+  }
+
   get currentPlayer(): Player | null {
 
     if (this.game === null) {
@@ -892,6 +959,16 @@ export class GameComponent implements OnInit, OnDestroy {
     return this.game.discardPile[
       this.game.discardPile.length - 1
     ] ?? null;
+  }
+
+  get winner(): Player | null {
+    if (this.game === null || this.game.status !== 'finished') {
+      return null;
+    }
+
+    return this.game.players.find(
+      player => player.hand.length === 0
+    ) ?? null;
   }
 
   get opponents(): Player[] {

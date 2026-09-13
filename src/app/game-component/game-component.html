@@ -27,12 +27,10 @@
 
   </header>
 
-
   @if (game && player) {
 
     <main class="game-board">
 
-      <!-- Gegner -->
       <section class="opponents">
 
         @for (
@@ -48,17 +46,19 @@
 
       </section>
 
-
-      <!-- Spielfeld -->
       <section class="center-area">
 
         <div class="piles">
 
-          <!-- Ziehstapel -->
           <button
             class="draw-pile"
             (click)="drawCard()"
-            [disabled]="!isMyTurn || game.status !== 'playing'"
+            [disabled]="
+              !isMyTurn ||
+              game.status !== 'playing' ||
+              hasDrawnThisTurn ||
+              playableCards.length > 0
+            "
           >
 
             <div class="draw-card-back">
@@ -71,8 +71,6 @@
 
           </button>
 
-
-          <!-- Ablagestapel -->
           <div class="discard-pile">
 
             @if (topCard) {
@@ -91,8 +89,6 @@
 
         </div>
 
-
-        <!-- Aktuelle Farbe -->
         <div class="current-color">
 
           Aktuelle Farbe:
@@ -103,8 +99,6 @@
 
         </div>
 
-
-        <!-- Fehlermeldung -->
         @if (errorMessage) {
 
           <div class="error-message">
@@ -113,8 +107,33 @@
 
         }
 
+        @if (
+          showDrawnCardOption &&
+          isMyTurn
+        ) {
 
-        <!-- Wild-Farbauswahl -->
+          <div class="drawn-card-option">
+
+            <h3>
+              Gezogene Karte ist spielbar
+            </h3>
+
+            <p>
+              Du kannst sie spielen oder deinen Zug beenden.
+            </p>
+
+            <button
+              class="end-turn-button"
+              type="button"
+              (click)="endPlayerTurn()"
+            >
+              Zug beenden
+            </button>
+
+          </div>
+
+        }
+
         @if (selectedWildCard) {
 
           <div class="wild-selector">
@@ -157,6 +176,7 @@
 
             <button
               class="cancel-button"
+              type="button"
               (click)="cancelWildSelection()"
             >
               Abbrechen
@@ -168,8 +188,6 @@
 
       </section>
 
-
-      <!-- Eigene Hand -->
       <section class="player-area">
 
         <div class="player-name">
@@ -177,9 +195,11 @@
           {{ player.username }}
 
           @if (isMyTurn) {
+
             <span class="turn-indicator">
               Du bist dran!
             </span>
+
           }
 
         </div>
@@ -198,6 +218,58 @@
 
     <div class="loading">
       Spiel wird geladen...
+    </div>
+
+  }
+
+  @if (winner) {
+
+    <div class="game-over-overlay">
+
+      <div class="game-over-card">
+
+        <div class="game-over-title">
+          🎉
+        </div>
+
+        <h2>
+          Spiel beendet!
+        </h2>
+
+        <p class="winner-text">
+
+          <strong>
+            {{ winner.username }}
+          </strong>
+
+          hat gewonnen!
+
+        </p>
+
+        @if (player && winner.id === player.id) {
+
+          <p>
+            Glückwunsch, du hast gewonnen!
+          </p>
+
+        } @else {
+
+          <p>
+            Vielleicht klappt es beim nächsten Spiel.
+          </p>
+
+        }
+
+        <button
+          class="home-button"
+          type="button"
+          (click)="goHome()"
+        >
+          Zur Startseite
+        </button>
+
+      </div>
+
     </div>
 
   }

@@ -1,8 +1,7 @@
 import { Injectable } from '@angular/core';
-
 import { User } from '../user';
 
-interface StoredUser extends User {
+export interface StoredUser extends User {
   password: string;
 }
 
@@ -10,13 +9,11 @@ interface StoredUser extends User {
   providedIn: 'root'
 })
 export class StorageService {
-
   private readonly usersKey = 'uno_users';
   private readonly currentUserKey = 'uno_current_user';
 
   getUsers(): StoredUser[] {
-    const storedUsers =
-      localStorage.getItem(this.usersKey);
+    const storedUsers = localStorage.getItem(this.usersKey);
 
     if (!storedUsers) {
       return [];
@@ -29,51 +26,33 @@ export class StorageService {
         return [];
       }
 
-      return users;
+      return users as StoredUser[];
     } catch {
       return [];
     }
   }
 
   saveUsers(users: StoredUser[]): void {
-    localStorage.setItem(
-      this.usersKey,
-      JSON.stringify(users)
-    );
+    localStorage.setItem(this.usersKey, JSON.stringify(users));
   }
 
   addUser(user: StoredUser): void {
     const users = this.getUsers();
-
     users.push(user);
-
     this.saveUsers(users);
   }
 
-  getUserByUsername(
-    username: string
-  ): StoredUser | null {
-
+  getUserByUsername(username: string): StoredUser | null {
     const users = this.getUsers();
+    const normalizedUsername = username.trim().toLowerCase();
 
-    const user = users.find(
-      storedUser =>
-        storedUser.username.toLowerCase() ===
-        username.toLowerCase()
-    );
-
-    return user ?? null;
+    return users.find(
+      user => user.username.toLowerCase() === normalizedUsername
+    ) ?? null;
   }
 
   getUserById(id: number): StoredUser | null {
-
-    const users = this.getUsers();
-
-    const user = users.find(
-      storedUser => storedUser.id === id
-    );
-
-    return user ?? null;
+    return this.getUsers().find(user => user.id === id) ?? null;
   }
 
   saveCurrentUser(user: User): void {
@@ -84,11 +63,7 @@ export class StorageService {
   }
 
   getCurrentUser(): User | null {
-
-    const storedUser =
-      localStorage.getItem(
-        this.currentUserKey
-      );
+    const storedUser = localStorage.getItem(this.currentUserKey);
 
     if (!storedUser) {
       return null;
@@ -102,15 +77,11 @@ export class StorageService {
   }
 
   clearCurrentUser(): void {
-    localStorage.removeItem(
-      this.currentUserKey
-    );
+    localStorage.removeItem(this.currentUserKey);
   }
 
   updateUser(user: StoredUser): void {
-
     const users = this.getUsers();
-
     const userIndex = users.findIndex(
       storedUser => storedUser.id === user.id
     );
@@ -120,26 +91,30 @@ export class StorageService {
     }
 
     users[userIndex] = user;
-
     this.saveUsers(users);
 
-    const currentUser =
-      this.getCurrentUser();
+    const currentUser = this.getCurrentUser();
 
-    if (
-      currentUser !== null &&
-      currentUser.id === user.id
-    ) {
-      const updatedCurrentUser: User = {
+    if (currentUser?.id === user.id) {
+      this.saveCurrentUser({
         id: user.id,
         username: user.username,
         wins: user.wins,
         hasSavedGame: user.hasSavedGame
-      };
-
-      this.saveCurrentUser(
-        updatedCurrentUser
-      );
+      });
     }
+  }
+
+  addWin(userId: number): void {
+    const user = this.getUserById(userId);
+
+    if (user === null) {
+      return;
+    }
+
+    this.updateUser({
+      ...user,
+      wins: user.wins + 1
+    });
   }
 }
