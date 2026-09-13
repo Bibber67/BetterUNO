@@ -1,0 +1,277 @@
+<div class="game-page">
+
+  <header class="game-header">
+
+    <h1>UNO</h1>
+
+    @if (game) {
+      <div class="game-status">
+
+        @if (game.status === 'playing') {
+          <span>
+            Am Zug:
+            <strong>
+              {{ currentPlayer?.username }}
+            </strong>
+          </span>
+        }
+
+        @if (game.status === 'finished') {
+          <span>
+            Spiel beendet
+          </span>
+        }
+
+      </div>
+    }
+
+  </header>
+
+  @if (game && player) {
+
+    <main class="game-board">
+
+      <section class="opponents">
+
+        @for (
+          opponent of opponents;
+          track opponent.id
+        ) {
+
+          <app-opponent
+            [player]="opponent"
+          ></app-opponent>
+
+        }
+
+      </section>
+
+      <section class="center-area">
+
+        <div class="piles">
+
+          <button
+            class="draw-pile"
+            (click)="drawCard()"
+            [disabled]="
+              !isMyTurn ||
+              game.status !== 'playing' ||
+              hasDrawnThisTurn ||
+              playableCards.length > 0
+            "
+          >
+
+            <div class="draw-card-back">
+              <span>UNO</span>
+            </div>
+
+            <span class="pile-label">
+              Ziehen
+            </span>
+
+          </button>
+
+          <div class="discard-pile">
+
+            @if (topCard) {
+
+              <app-card
+                [cardData]="topCard"
+              ></app-card>
+
+            }
+
+            <span class="pile-label">
+              Ablage
+            </span>
+
+          </div>
+
+        </div>
+
+        <div class="current-color">
+
+          Aktuelle Farbe:
+
+          <strong>
+            {{ game.currentColor }}
+          </strong>
+
+        </div>
+
+        @if (errorMessage) {
+
+          <div class="error-message">
+            {{ errorMessage }}
+          </div>
+
+        }
+
+        @if (
+          showDrawnCardOption &&
+          isMyTurn
+        ) {
+
+          <div class="drawn-card-option">
+
+            <h3>
+              Gezogene Karte ist spielbar
+            </h3>
+
+            <p>
+              Du kannst sie spielen oder deinen Zug beenden.
+            </p>
+
+            <button
+              class="end-turn-button"
+              type="button"
+              (click)="endPlayerTurn()"
+            >
+              Zug beenden
+            </button>
+
+          </div>
+
+        }
+
+        @if (selectedWildCard) {
+
+          <div class="wild-selector">
+
+            <h3>
+              Wähle eine Farbe
+            </h3>
+
+            <div class="color-buttons">
+
+              <button
+                class="color-button red"
+                (click)="chooseWildColor('red')"
+              >
+                Rot
+              </button>
+
+              <button
+                class="color-button yellow"
+                (click)="chooseWildColor('yellow')"
+              >
+                Gelb
+              </button>
+
+              <button
+                class="color-button green"
+                (click)="chooseWildColor('green')"
+              >
+                Grün
+              </button>
+
+              <button
+                class="color-button blue"
+                (click)="chooseWildColor('blue')"
+              >
+                Blau
+              </button>
+
+            </div>
+
+            <button
+              class="cancel-button"
+              type="button"
+              (click)="cancelWildSelection()"
+            >
+              Abbrechen
+            </button>
+
+          </div>
+
+        }
+
+      </section>
+
+      <section class="player-area">
+
+        <div class="player-name">
+
+          {{ player.username }}
+
+          @if (isMyTurn) {
+
+            <span class="turn-indicator">
+              Du bist dran!
+            </span>
+
+          }
+
+        </div>
+
+        <app-player-hand
+          [cards]="player.hand"
+          [playableCards]="playableCards"
+          (cardSelected)="onCardSelected($event)"
+        ></app-player-hand>
+
+      </section>
+
+    </main>
+
+  } @else {
+
+    <div class="loading">
+      Spiel wird geladen...
+    </div>
+
+  }
+
+  @if (winner) {
+
+    <div class="game-over-overlay">
+
+      <div class="game-over-card">
+
+        <div class="game-over-title">
+          🎉
+        </div>
+
+        <h2>
+          Spiel beendet!
+        </h2>
+
+        <p class="winner-text">
+
+          <strong>
+            {{ winner.username }}
+          </strong>
+
+          hat gewonnen!
+
+        </p>
+
+        @if (player && winner.id === player.id) {
+
+          <p>
+            Glückwunsch, du hast gewonnen!
+          </p>
+
+        } @else {
+
+          <p>
+            Vielleicht klappt es beim nächsten Spiel.
+          </p>
+
+        }
+
+        <button
+          class="home-button"
+          type="button"
+          (click)="goHome()"
+        >
+          Zur Startseite
+        </button>
+
+      </div>
+
+    </div>
+
+  }
+
+</div>
