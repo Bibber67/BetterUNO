@@ -2,7 +2,7 @@ export interface User {
     id: number;
     username: string;
     wins: number;
-    hasSavedGame?: boolean;
+    hasSavedGame: boolean;
 }
 
 export interface LeaderboardEntry extends User {
