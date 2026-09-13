@@ -1,0 +1,35 @@
+<section class="home">
+  <div>
+    <h1>Willkommen, {{ userName }}!</h1>
+    <p>Lokales UNO mit Freunden oder gegen Bots.</p>
+  </div>
+
+  <div class="winShow">
+    <b>{{ wins }}</b>
+    <p>Siege</p>
+  </div>
+</section>
+
+<section class="homeGrid">
+  <a class="gridElement" routerLink="/new">
+    <div class="icon">▶︎</div>
+    <b>Neues Spiel</b>
+    <p class="small">Gegen Bots oder lokal zu zweit</p>
+  </a>
+
+  <div class="gridElement disabledCard">
+    <div class="icon">
+      <img class="imageIcon" src="/forward-button.png" alt="Continue">
+    </div>
+    <b>Spiel fortsetzen</b>
+    <p class="small">Kein gespeicherter Spielstand</p>
+  </div>
+
+  <a class="gridElement" routerLink="/leaderboard">
+    <div class="icon">
+      <img class="imageIcon" src="/ranking.png" alt="Leaderboard">
+    </div>
+    <b>Leaderboard</b>
+    <p class="small">Lokale Rangliste</p>
+  </a>
+</section>
