@@ -1,0 +1,352 @@
+.game-page {
+  min-height: 100vh;
+
+  box-sizing: border-box;
+
+  padding: 20px;
+
+  background:
+    radial-gradient(
+      circle at center,
+      #388e3c 0%,
+      #1b5e20 100%
+    );
+
+  color: white;
+
+  font-family: Arial, sans-serif;
+}
+
+
+.game-header {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+
+  max-width: 1200px;
+
+  margin: 0 auto 20px;
+}
+
+
+.game-header h1 {
+  margin: 0;
+
+  font-size: 42px;
+
+  letter-spacing: 3px;
+}
+
+
+.game-status {
+  background: rgba(0, 0, 0, 0.3);
+
+  padding: 10px 18px;
+
+  border-radius: 10px;
+}
+
+
+.game-board {
+  max-width: 1200px;
+
+  margin: 0 auto;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 25px;
+}
+
+
+.opponents {
+  display: flex;
+
+  justify-content: center;
+
+  gap: 100px;
+
+  min-height: 100px;
+}
+
+
+.center-area {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  min-height: 300px;
+}
+
+
+.piles {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 50px;
+}
+
+
+.draw-pile,
+.discard-pile {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  gap: 8px;
+}
+
+
+.draw-pile {
+  background: none;
+
+  border: none;
+
+  color: white;
+
+  padding: 0;
+}
+
+
+.draw-pile:not(:disabled) {
+  cursor: pointer;
+}
+
+
+.draw-pile:not(:disabled):hover
+.draw-card-back {
+  transform: translateY(-8px);
+}
+
+
+.draw-pile:disabled {
+  opacity: 0.6;
+}
+
+
+.draw-card-back {
+  width: 95px;
+  height: 133px;
+
+  border-radius: 10px;
+
+  border: 3px solid white;
+
+  background:
+    repeating-linear-gradient(
+      45deg,
+      #c62828,
+      #c62828 8px,
+      #b71c1c 8px,
+      #b71c1c 16px
+    );
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  font-size: 18px;
+  font-weight: bold;
+
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.35);
+
+  transition:
+    transform 0.15s ease;
+}
+
+
+.pile-label {
+  font-size: 14px;
+
+  opacity: 0.9;
+}
+
+
+.current-color {
+  margin-top: 20px;
+
+  background: rgba(0, 0, 0, 0.25);
+
+  padding: 8px 15px;
+
+  border-radius: 8px;
+}
+
+
+.error-message {
+  margin-top: 15px;
+
+  padding: 10px 15px;
+
+  background: rgba(180, 0, 0, 0.85);
+
+  border-radius: 8px;
+
+  font-weight: bold;
+}
+
+
+.player-area {
+  background: rgba(0, 0, 0, 0.18);
+
+  border-radius: 15px;
+
+  padding: 15px;
+}
+
+
+.player-name {
+  text-align: center;
+
+  font-size: 20px;
+
+  font-weight: bold;
+}
+
+
+.turn-indicator {
+  margin-left: 10px;
+
+  padding: 5px 10px;
+
+  background: #fdd835;
+
+  color: #222;
+
+  border-radius: 6px;
+
+  font-size: 14px;
+}
+
+
+.wild-selector {
+  margin-top: 20px;
+
+  padding: 20px;
+
+  background: rgba(0, 0, 0, 0.5);
+
+  border-radius: 12px;
+
+  text-align: center;
+}
+
+
+.wild-selector h3 {
+  margin-top: 0;
+}
+
+
+.color-buttons {
+  display: flex;
+
+  gap: 10px;
+
+  justify-content: center;
+
+  flex-wrap: wrap;
+}
+
+
+.color-button {
+  width: 80px;
+
+  padding: 10px;
+
+  border: 2px solid white;
+
+  border-radius: 8px;
+
+  color: white;
+
+  font-weight: bold;
+
+  cursor: pointer;
+}
+
+
+.color-button.red {
+  background: #e53935;
+}
+
+
+.color-button.yellow {
+  background: #fdd835;
+
+  color: black;
+}
+
+
+.color-button.green {
+  background: #43a047;
+}
+
+
+.color-button.blue {
+  background: #1e88e5;
+}
+
+
+.cancel-button {
+  margin-top: 15px;
+
+  padding: 8px 15px;
+
+  border: none;
+
+  border-radius: 6px;
+
+  cursor: pointer;
+}
+
+
+.loading {
+  text-align: center;
+
+  margin-top: 100px;
+
+  font-size: 24px;
+}
+
+
+@media (max-width: 700px) {
+
+  .game-page {
+    padding: 10px;
+  }
+
+
+  .opponents {
+    gap: 30px;
+  }
+
+
+  .piles {
+    gap: 20px;
+  }
+
+
+  .draw-card-back,
+  .discard-pile .card-image {
+    width: 70px;
+  }
+
+
+  .player-area {
+    padding: 8px;
+  }
+
+}
