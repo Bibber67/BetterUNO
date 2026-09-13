@@ -1,9 +1,9 @@
-.panel {
+section {
     width: 700px;
     margin: 60px auto;
 }
 
-.panelHeader {
+.header {
     display: flex;
     justify-content: space-between;
     align-items: end;
