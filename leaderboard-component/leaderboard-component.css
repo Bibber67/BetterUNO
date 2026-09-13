@@ -1,0 +1,79 @@
+section {
+    width: 700px;
+    margin: 60px auto;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+
+    margin-bottom: 25px;
+}
+
+.ranking {
+    font-size: 12px;
+    font-weight: 700;
+    color: #8c95aa;
+}
+
+h1 {
+    margin: 5px 0 0;
+
+    font-size: 36px;
+    color: #17213d;
+}
+
+.filter {
+    font-size: 13px;
+    color: #68718b;
+}
+
+table {
+    width: 100%;
+
+    border-collapse: collapse;
+
+    background: white;
+    border: 1px solid #e1e5ee;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+th {
+    padding: 15px 20px;
+
+    text-align: left;
+
+    background: #f7f8fb;
+    color: #68718b;
+
+    font-size: 13px;
+}
+
+td {
+    padding: 16px 20px;
+
+    border-top: 1px solid #e1e5ee;
+
+    color: #17213d;
+    font-size: 14px;
+}
+
+#rank {
+    width: 60px;
+
+    color: #8c95aa;
+    font-weight: 700;
+}
+
+#wins {
+    width: 80px;
+
+    text-align: right;
+    font-weight: 700;
+}
+
+th:last-child {
+    text-align: right;
+}

@@ -1,0 +1,13 @@
+<div class="player-hand">
+
+  @for (card of cards; track card.id) {
+
+    <app-card
+      [cardData]="card"
+      [playable]="isPlayable(card)"
+      (cardClicked)="selectCard($event)"
+    ></app-card>
+
+  }
+
+</div>

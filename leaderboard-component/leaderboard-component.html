@@ -1,0 +1,30 @@
+<section>
+    <div class="header">
+        <div>
+            <span class="ranking">RANGLISTE</span>
+            <h1>Leaderboard</h1>
+        </div>
+        <span class="filter">
+            Siege absteigend - Username alphabetisch
+        </span>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Spieler</th>
+                <th>Siege</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (row of rows; track row.id) {
+            <tr>
+                <td id="rank">{{ row.rank }}</td>
+                <td><b>{{ row.username }}</b></td>
+                <td id="wins">{{ row.wins }}</td>
+            </tr>
+            }
+        </tbody>
+    </table>
+</section>
